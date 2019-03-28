@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  # RabbitMQ is used here for internal communications, and for our services
+  rabbitmq:
+    image: "rabbitmq:3-management"
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    expose:
+      - "5672"
+  # The actual dataflow server
+  dataflow-server:
+    image: springcloud/spring-cloud-dataflow-server:${DATAFLOW_VERSION:?DATAFLOW_VERSION is not set!}
+    container_name: dataflow-server
+    ports:
+      - "9393:9393"
+    environment:
+      - spring.cloud.dataflow.applicationProperties.stream.spring.rabbitmq.host=rabbitmq
+      - spring.cloud.skipper.client.serverUri=http://skipper-server:7577/api
+    depends_on:
+      - rabbitmq
+  # Import custom applications to the server (sources, sinks, etc...)
+  app-import:
+    image: springcloud/openjdk:latest
+    depends_on:
+      - dataflow-server
+    command: >
+      /bin/sh -c "
+        while ! nc -z dataflow-server 9393;
+        do
+          sleep 1;
+        done;
+        wget -qO- 'http://dataflow-server:9393/apps' --post-data='uri=http://bit.ly/Einstein-SR2-stream-applications-rabbit-maven';
+        echo 'Stream apps imported'
+        wget -qO- 'http://dataflow-server:9393/apps' --post-data='uri=http://bit.ly/Dearborn-SR1-task-applications-maven&force=true';
+        echo 'Task apps imported'"
+  # Skipper server used by the dataflow server
+  skipper-server:
+    image: springcloud/spring-cloud-skipper-server:${SKIPPER_VERSION:?SKIPPER_VERSION is not set!}
+    container_name: skipper
+    ports:
+      - "7577:7577"
+      - "9000-9010:9000-9010"

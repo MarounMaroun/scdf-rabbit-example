@@ -1,0 +1,4 @@
+STREAM_2=:messages > filter --expression="#jsonPath(payload, '$.id')==1" | rabbit --queues=worker1 --host=rabbitmq --routing-key=w1 --exchange=test_exchange
+STREAM_3=:messages > filter --expression="#jsonPath(payload, '$.id')==2" | rabbit --queues=worker2 --host=rabbitmq --routing-key=w2 --exchange=test_exchange
+STREAM_4=:messages > filter --expression="#jsonPath(payload, '$.id')==3" | rabbit --queues=worker3 --host=rabbitmq --routing-key=w3 --exchange=test_exchange
+STREAM_1=rabbit --queues=hello_queue --host=rabbitmq > :messages
